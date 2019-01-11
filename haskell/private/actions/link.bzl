@@ -8,7 +8,12 @@ load(":private/set.bzl", "set")
 load(":private/providers.bzl", "external_libraries_get_mangled")
 
 def backup_path(target):
-    """Return a path from the directory this is in to the Bazel root.
+    """Return a path from the directory this `target` is in
+    to its runfile directory.
+
+    foo => .
+    foo/bar => ..
+    foo/bar/baz => ../..
 
     Args:
       target: File
@@ -16,9 +21,16 @@ def backup_path(target):
     Returns:
       A path of the form "../../.."
     """
-    n = len(target.dirname.split("/"))
+    short_path_dir = paths.normalize(paths.dirname(target.short_path))
 
-    return "/".join([".."] * n)
+    # dirname returns "" if there is no parent directory
+    # and normalize returns "." for "". In that case we
+    # return the identity path, which is ".".
+    if short_path_dir == ".":
+        return "."
+    else:
+        n = len(short_path_dir.split("/"))
+        return "/".join([".."] * n)
 
 def _fix_darwin_linker_paths(hs, inp, out, external_libraries):
     """Postprocess a macOS binary to make shared library references relative.
@@ -60,7 +72,7 @@ def _fix_darwin_linker_paths(hs, inp, out, external_libraries):
                 # at execution time.
                 "/usr/bin/install_name_tool -change {} {} {}".format(
                     f.lib.path,
-                    paths.join("@loader_path", backup_path(out), f.lib.path),
+                    paths.join("@loader_path", backup_path(out), f.lib.short_path),
                     out.path,
                 )
                 # we use the unmangled lib (f.lib) for this instead of a mangled lib name
@@ -297,7 +309,12 @@ def _separate_static_and_dynamic_libraries(ext_libs, dynamic):
 
 def _infer_rpaths(is_darwin, target, solibs):
     """Return set of RPATH values to be added to target so it can find all
-    solibs.
+    solibs
+
+    The resulting paths look like:
+    $ORIGIN/../../path/to/solib/dir
+    This means: "go upwards to your runfiles directory, then descend into
+    the parent folder of the solib".
 
     Args:
       is_darwin: Whether we're compiling on and for Darwin.
@@ -318,7 +335,7 @@ def _infer_rpaths(is_darwin, target, solibs):
         rpath = paths.normalize(
             paths.join(
                 backup_path(target),
-                solib.dirname,
+                paths.dirname(solib.short_path),
             ),
         )
         set.mutable_insert(r, origin + rpath)
