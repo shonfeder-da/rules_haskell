@@ -17,7 +17,7 @@ def _get_extra_libraries(ext_libs):
             extra_libs.append(lib_name)
     return extra_libs
 
-def package(hs, dep_info, interfaces_dir, interfaces_dir_prof, static_library, dynamic_library, exposed_modules_file, other_modules, my_pkg_id, static_library_prof):
+def package(hs, dep_info, interfaces_dir, interfaces_dir_prof, static_library, dynamic_library, exposed_modules_file, other_modules, my_pkg_id, static_library_prof, write_pkg_conf):
     """Create GHC package using ghc-pkg.
 
     Args:
@@ -90,14 +90,10 @@ def package(hs, dep_info, interfaces_dir, interfaces_dir_prof, static_library, d
 
     # Combine exposed modules and other metadata to form the package
     # configuration file.
-    hs.actions.run_shell(
+    hs.actions.run(
         inputs = [metadata_file, exposed_modules_file] + prebuilt_deps_id_files,
         outputs = [conf_file],
-        command = """
-        cat $1 > $4
-        echo "exposed-modules: $(< $2)" >> $4
-        echo "depends: $(cat $3 | tr "\\n" " ")" >> $4
-        """,
+        executable = write_pkg_conf,
         arguments = [
             metadata_file.path,
             exposed_modules_file.path,
