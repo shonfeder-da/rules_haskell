@@ -5,6 +5,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load(":private/path_utils.bzl", "get_lib_name", "is_shared_library", "is_static_library")
 load(":private/pkg_id.bzl", "pkg_id")
 load(":private/set.bzl", "set")
+load(":private/list.bzl", "list")
 load(":private/providers.bzl", "external_libraries_get_mangled")
 
 def backup_path(target):
@@ -244,6 +245,9 @@ def link_binary(
 
     return executable
 
+def __mangled_lib_name(ext_lib):
+    return get_lib_name(ext_lib.mangled_lib)
+
 def _add_external_libraries(args, ext_libs):
     """Add options to `args` that allow us to link to `ext_libs`.
 
@@ -251,16 +255,24 @@ def _add_external_libraries(args, ext_libs):
       args: Args object.
       ext_libs: external_libraries from HaskellBuildInfo
     """
-    seen_libs = set.empty()
-    for ext_lib in set.to_list(ext_libs):
-        lib = ext_lib.mangled_lib
-        lib_name = get_lib_name(lib)
-        if not set.is_member(seen_libs, lib_name):
-            set.mutable_insert(seen_libs, lib_name)
-            args.add([
-                "-l{0}".format(lib_name),
-                "-L{0}".format(paths.dirname(lib.path)),
-            ])
+
+    # Deduplicate the list of ext_libs based on their mangled
+    # library name (file name stripped of lib prefix and endings).
+    # This keeps the command lines short, e.g. when a C library
+    # like `liblz4.so` appears in multiple dependencies.
+    deduped = list.dedup_on(set.to_list(ext_libs), __mangled_lib_name)
+
+    for ext_lib in deduped:
+        args.add([
+            "-L{0}".format(
+                paths.dirname(ext_lib.mangled_lib.path),
+            ),
+            "-l{0}".format(
+                # technically this is the second call to get_lib_name,
+                #  but the added clarity makes up for it.
+                get_lib_name(ext_lib.mangled_lib),
+            ),
+        ])
 
 def _separate_static_and_dynamic_libraries(ext_libs, dynamic):
     """Separate static and dynamic libraries while avoiding duplicates.
