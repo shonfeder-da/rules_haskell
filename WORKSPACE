@@ -27,6 +27,10 @@ load(
     "haskell_nixpkgs_package",
     "haskell_nixpkgs_packageset",
 )
+load(
+    "@io_tweag_rules_haskell//:tests/external-haskell-repository/workspace_dummy.bzl",
+    "haskell_package_repository_dummy",
+)
 
 haskell_nixpkgs_package(
     name = "ghc",
@@ -172,6 +176,11 @@ maven_jar(
 local_repository(
     name = "c2hs_repo",
     path = "tests/c2hs/repo",
+)
+
+# dummy repo for the external haskell repo test (hazel)
+haskell_package_repository_dummy(
+    name = "haskell_package_repository_dummy",
 )
 
 # For Skydoc

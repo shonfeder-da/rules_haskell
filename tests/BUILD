@@ -12,10 +12,12 @@ load(
     "haskell_test",
     "haskell_toolchain",
 )
+load(
+    "//:tests/constants.bzl",
+    "ghc_version",
+)
 
 package(default_testonly = 1)
-
-ghc_version = "8.6.3"
 
 # These toolchains are all morally testonly. However, that would break
 # our tests of haskell_library_rules: aspects of non-testonly
