@@ -99,7 +99,16 @@ def haskell_nixpkgs_packages(name, base_attribute_path, packages, **kwargs):
         base_repository = name,
     )
 
+def _is_nix_platform(repository_ctx):
+    if repository_ctx.execute(["nix-build","--version"]).return_code == 0:
+      nix_in_path = True
+    else:
+      nix_in_path = False
+    is_windows = repository_ctx.os.name.startswith("windows")
+    return (not is_windows) and nix_in_path
+
 def _gen_imports_impl(repository_ctx):
+    repository_ctx.report_progress("allo?")
     repository_ctx.file("BUILD", "")
     extra_args_raw = ""
     for foo, bar in repository_ctx.attr.extra_args.items():
@@ -119,18 +128,15 @@ def import_packages(name):
         extra_args_raw = extra_args_raw,
     )
 
-    # A dummy 'packages.bzl' file with a no-op 'import_packages()' on Windows
-    bzl_file_content_windows = """
+    # A dummy 'packages.bzl' file with a no-op 'import_packages()' on unsupported platforms
+    bzl_file_content_unsupported_platform = """
 def import_packages(name):
     return
     """
-
-    is_windows = repository_ctx.os.name.startswith("windows")
-
-    if is_windows:
-        repository_ctx.file("packages.bzl", bzl_file_content_windows)
-    else:
+    if _is_nix_platform(repository_ctx):
         repository_ctx.file("packages.bzl", bzl_file_content)
+    else:
+        repository_ctx.file("packages.bzl", bzl_file_content_unsupported_platform)
 
 _gen_imports_str = repository_rule(
     implementation = _gen_imports_impl,

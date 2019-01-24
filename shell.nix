@@ -41,5 +41,9 @@ mkShell {
 
     # source bazel bash completion
     source ${pkgs.bazel}/share/bash-completion/completions/bazel
+    function nix-build() {
+      echo "Foo"
+      return 1
+    }
   '';
 }
