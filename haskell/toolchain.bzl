@@ -49,39 +49,38 @@ def _run_ghc(hs, cc, inputs, outputs, mnemonic, arguments, params_file = None, e
             "-optP-traditional",
         ])
 
-    ghc_args_file = hs.actions.declare_file("ghc_args_%s_%s" % (hs.name, mnemonic))
-    extra_args_file = hs.actions.declare_file("extra_args_%s_%s" % (hs.name, mnemonic))
-
+    args.use_param_file("%s", use_always=True)
     args.set_param_file_format("multiline")
+    arguments.use_param_file("%s", use_always=True)
     arguments.set_param_file_format("multiline")
-    hs.actions.write(ghc_args_file, args)
-    hs.actions.write(extra_args_file, arguments)
 
     extra_inputs = [
         hs.tools.ghc,
         # Depend on the version file of the Haskell toolchain,
         # to ensure the version comparison check is run first.
         hs.toolchain.version_file,
-        ghc_args_file,
-        extra_args_file,
     ] + cc.files
     if params_file:
         command = """
         export PATH=${PATH:-} # otherwise GCC fails on Windows
-        readarray -t ghc_args < %s
-        readarray -t extra_args < %s
-        readarray -t param_file_args < %s
+        cat $1 $2 $3 >&2
+        readarray -t ghc_args < $1
+        readarray -t extra_args < $2
+        readarray -t param_file_args < $3
+
         "${ghc_args[@]}" "${extra_args[@]}" "${param_file_args[@]}"
-""" % (ghc_args_file.path, extra_args_file.path, params_file.path)
+"""
         extra_inputs.append(params_file)
     else:
         command = """
         export PATH=${PATH:-} # otherwise GCC fails on Windows
-        readarray -t ghc_args < %s
-        readarray -t extra_args < %s
+        cat $1 $2 >&2
+
+        readarray -t ghc_args < $1
+        readarray -t extra_args < $2
 
         "${ghc_args[@]}" "${extra_args[@]}"
-""" % (ghc_args_file.path, extra_args_file.path)
+"""
 
     if type(inputs) == type(depset()):
         inputs = depset(extra_inputs, transitive = [inputs])
@@ -95,7 +94,8 @@ def _run_ghc(hs, cc, inputs, outputs, mnemonic, arguments, params_file = None, e
         mnemonic = mnemonic,
         progress_message = progress_message,
         env = env,
-        arguments = [],
+        arguments = [args, arguments] + (
+            [params_file.path] if params_file else []),
     )
 
     return args
