@@ -28,8 +28,7 @@ def _run_ghc(hs, cc, inputs, outputs, mnemonic, arguments, params_file = None, e
     # Do not use Bazel's CC toolchain on Windows, as it leads to linker and librarty compatibility issues.
     # XXX: We should also tether Bazel's CC toolchain to GHC's, so that we can properly mix Bazel-compiled
     # C libraries with Haskell targets.
-    # if not hs.toolchain.is_windows:
-    if True:
+    if not hs.toolchain.is_windows:
         args.add_all([
             # GHC uses C compiler for assemly, linking and preprocessing as well.
             "-pgma",
@@ -151,6 +150,10 @@ fi
         name.replace("-", "_"): file
         for name, file in ghc_binaries.items()
     }
+
+    if ctx.attr.is_windows:
+        tools_struct_args["ar"] = (
+            paths.join(ghc.path, "..", "mingw", "bin", "ar.exe"))
 
     locale_archive = None
 

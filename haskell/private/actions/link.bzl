@@ -486,11 +486,16 @@ def link_library_static(hs, cc, dep_info, objects_dir, my_pkg_id, with_profiling
             static_library,
             "@" + objects_dir_manifest.path,
         ])
+
+        ar_exe = (hs.toolchain.tools.ar
+            if hs.toolchain.is_windows
+            else cc.tools.ar)
+
         hs.actions.run(
             inputs = inputs,
             outputs = [static_library],
             mnemonic = "HaskellLinkStaticLibrary",
-            executable = cc.tools.ar,
+            executable = ar_exe,
             arguments = [args],
         )
 
