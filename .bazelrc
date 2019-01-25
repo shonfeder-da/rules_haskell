@@ -18,6 +18,6 @@ test:ci --test_output=errors
 test --test_env=LANG=en_US.utf8 --test_env=LOCALE_ARCHIVE
 
 # Crosstool configuration for Windows CI
-build:azure --crosstool_top=toolchain
+build:azure --crosstool_top=toolchain -s --verbose_failures
 
 try-import .bazelrc.local
