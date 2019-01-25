@@ -153,7 +153,7 @@ fi
 
     if ctx.attr.is_windows:
         tools_struct_args["ar"] = (
-            paths.join(ghc.path, "..", "mingw", "bin", "ar.exe"))
+            paths.join(ghc.path.dirname, "..", "mingw", "bin", "ar.exe"))
 
     locale_archive = None
 
